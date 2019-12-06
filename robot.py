@@ -6,8 +6,9 @@ from wpilib import DoubleSolenoid
 from navx import AHRS
 from wpilib.interfaces import GenericHID
 from wpilib.drive import DifferentialDrive
+from wpilib import DoubleSolenoid
 
-import robotpy_ext.common_drivers
+# import robotpy_ext.common_controllers
 
 
 #TODO: Check id's
@@ -23,6 +24,11 @@ RIGHT_SLAVE_2_ID = 6
 #ELEVATOR ID (talon)
 ELEVATOR_ID_MASTER = 7
 ELEVATOR_ID_SLAVE = 8
+
+PCM_CAN_ID = 0
+#4BAR ID
+PISTON_EXTEND_ID = 4
+PISTON_RETRACT_ID = 5
 
 #ELEVATOR PID IDs
 MIN_ELEVATOR_RANGE = 0
@@ -62,6 +68,8 @@ class Robot(wpilib.TimedRobot):
         
         self.ballManipulator = BallManipulator(ctre.WPI_TalonSRX(BALL_MANIP_ID))
 
+        self.piston = wpilib.DoubleSolenoid(PCM_CAN_ID, PISTON_EXTEND_ID, PISTON_RETRACT_ID)
+
 
         #ELEVATOR
         elevator_motor = createTalonAndSlaves(ELEVATOR_ID_MASTER, ELEVATOR_ID_SLAVE)
@@ -95,7 +103,7 @@ class Robot(wpilib.TimedRobot):
         forward = -self.controller.getRawAxis(5)
         rotation_value = rotation_value = self.controller.getX(LEFT_HAND)
         
-        forward = deadzone(forward, 0.2)
+        forward = 0.8 * deadzone(forward, 0.2)
 
         self.drivetrain.arcadeDrive(forward, rotation_value)
         
@@ -116,6 +124,16 @@ class Robot(wpilib.TimedRobot):
             self.elevator.go_down(self.controller.getTriggerAxis(RIGHT_HAND))
         else:
             self.elevator.stop()
+
+        #4BAR CONTROL
+        '''
+        Left bumper = retract intake (piston in)
+        Right bumper = extend intake beyond frame perimeter (piston out)
+        '''
+        if self.controller.getAButtonPressed():
+            self.piston.set(DoubleSolenoid.Value.kReverse)
+        elif self.controller.getBButtonPressed():
+            self.piston.set(DoubleSolenoid.Value.kForward)
 
 def createTalonAndSlaves(MASTER, slave1, slave2=None):
     '''
