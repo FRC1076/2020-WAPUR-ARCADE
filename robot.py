@@ -60,12 +60,13 @@ class Robot(wpilib.TimedRobot):
         #DRIVETRAIN
         self.left = createTalonAndSlaves(LEFT_MASTER_ID, LEFT_SLAVE_1_ID, LEFT_SLAVE_2_ID)
         self.right = createTalonAndSlaves(RIGHT_MASTER_ID, RIGHT_SLAVE_1_ID, RIGHT_SLAVE_2_ID)
-        self.robot_drive = wpilib.drive.DifferentialDrive(self.left, self.right)
+        #self.robot_drive = wpilib.drive.DifferentialDrive(self.left, self.right)
         
         self.drivetrain = wpilib.drive.DifferentialDrive(self.left, self.right)
 
         self.controller = wpilib.XboxController(0) #TODO: get actual port of controller
-        
+        self.controller2 = wpilib.XboxController(1)
+
         self.ballManipulator = BallManipulator(ctre.WPI_TalonSRX(BALL_MANIP_ID))
 
         self.piston = wpilib.DoubleSolenoid(PCM_CAN_ID, PISTON_EXTEND_ID, PISTON_RETRACT_ID)
@@ -83,6 +84,21 @@ class Robot(wpilib.TimedRobot):
     def teleopInit(self):
         print("TELEOP BEGINS")
 
+    def autonomousInit(self):
+        #self.myRobot.tankDrive(0.8, 0.8)
+        self.timer = wpilib.Timer()
+        self.timer.start()
+
+    def autonomousPeriodic(self):
+        # TODO: Add an auton
+        if self.timer.get() >= 3.0:
+            self.drivetrain.arcadeDrive(0, 0)
+        else:
+            self.drivetrain.arcadeDrive(0.5, 0)
+
+        wpilib.Timer.delay(0.01)
+
+    
     def teleopPeriodic(self):
         #TODO: figure out what values should be negative
 
@@ -90,9 +106,9 @@ class Robot(wpilib.TimedRobot):
         #Ball manipulator
         ballMotorSetPoint = 0
 
-        if self.controller.getBumper(LEFT_HAND):
+        if self.controller2.getBumper(LEFT_HAND):
             ballMotorSetPoint = 1.0
-        elif self.controller.getBumper(RIGHT_HAND):
+        elif self.controller2.getBumper(RIGHT_HAND):
             ballMotorSetPoint = -1.0
         else:
             ballMotorSetPoint = 0.0
@@ -112,16 +128,16 @@ class Robot(wpilib.TimedRobot):
             rotation_value = rotation_value * 0.75
             
         #Elevator control
-        left_trigger = self.controller.getTriggerAxis(LEFT_HAND)
-        right_trigger = self.controller.getTriggerAxis(RIGHT_HAND)
+        left_trigger = self.controller2.getTriggerAxis(LEFT_HAND)
+        right_trigger = self.controller2.getTriggerAxis(RIGHT_HAND)
 
         TRIGGER_LEVEL = 0.5
 
         #Up goes down, down goes up. It's a feature.
         if abs(left_trigger) > TRIGGER_LEVEL:
-            self.elevator.go_up(0.5 * self.controller.getTriggerAxis(LEFT_HAND))
+            self.elevator.go_up(0.5 * self.controller2.getTriggerAxis(LEFT_HAND))
         elif abs(right_trigger) > TRIGGER_LEVEL:
-            self.elevator.go_down(self.controller.getTriggerAxis(RIGHT_HAND))
+            self.elevator.go_down(self.controller2.getTriggerAxis(RIGHT_HAND))
         else:
             self.elevator.stop()
 
@@ -130,9 +146,9 @@ class Robot(wpilib.TimedRobot):
         Left bumper = retract intake (piston in)
         Right bumper = extend intake beyond frame perimeter (piston out)
         '''
-        if self.controller.getAButtonPressed():
+        if self.controller2.getAButtonPressed():
             self.piston.set(DoubleSolenoid.Value.kReverse)
-        elif self.controller.getBButtonPressed():
+        elif self.controller2.getBButtonPressed():
             self.piston.set(DoubleSolenoid.Value.kForward)
 
 def createTalonAndSlaves(MASTER, slave1, slave2=None):
